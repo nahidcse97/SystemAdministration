@@ -1,0 +1,25 @@
+wget https://www.python.org/ftp/python/3.6.8/Python-3.6.8.tar.xz
+tar -xf Python-3.6.8.tar.xz
+
+./configure --enable-optimizations  --prefix=/usr/local/python36
+make 
+make install
+
+
+
+
+ python36 -m ensurepip --upgrade
+
+ python36 -m  pip install virtualenv
+
+ ln -s /usr/local/python36/bin/python36 /sbin/python36
+
+ ln -s /usr/local/python36/bin/virtualenv /sbin/virtualenv
+
+virtualenv -p python36 .venv
+
+If you are facing this kind of error : 
+Segmentation fault (core dumped)
+Execute the below command with virtualenv active
+
+ python -m pip install -r requirements.txt   --use-deprecated=legacy-resolver
