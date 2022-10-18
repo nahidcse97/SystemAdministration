@@ -1,0 +1,23 @@
+sudo timedatectl set-timezone Asia/Dhaka 
+sudo dnf install chrony -y
+
+Edit the configuration file /etc/chrony.conf and point to your NTP server.
+
+sudo vim /etc/chrony.conf
+ server 0.us.pool.ntp.org
+server 1.us.pool.ntp.org
+server 2.us.pool.ntp.org
+server 3.us.pool.ntp.org
+
+Restart your Chrony service to apply the changes:
+
+sudo systemctl restart chronyd
+
+Next, set NTP synchronization:
+
+sudo timedatectl set-ntp true
+
+Enable your Chrony service to start on boot:
+
+sudo systemctl enable chronyd
+chronyc sources
