@@ -1,0 +1,19 @@
+#!/bin/bash
+backup_path="/var/www/html/"
+DATE=$(date +"%m-%d-%Y-%H-%M-%S")
+password="DivRApL@#4325IT%&"
+
+for DB in $(mysql -uroot --password=$password -e 'show databases' -s --skip-column-names); do
+    mysqldump -uroot --password=$password $DB > "$backup_path/$DB-$DATE.sql"
+    cd $backup_path/&&zip -r $DB-$DATE.sql.zip $DB-$DATE.sql&&rm -rf $DB-$DATE.sql;
+
+done
+
+echo "Deleting Unnecessary Schemas"
+cd $backup_path
+rm -fr information_schema-$DATE.sql.zip
+rm -fr mysql-$DATE.sql.zip
+rm -fr performance_schema-$DATE.sql.zip
+rm -fr sys-$DATE.sql.zip
+
+echo "Dump Taken Successfully!!"
