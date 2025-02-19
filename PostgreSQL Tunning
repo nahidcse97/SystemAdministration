@@ -1,0 +1,184 @@
+PSQL TUNING: TUNING: " Start by logging into psql and running the query I’ve provided at the end of the page. It will help you clearly understand the current condition and after change impacts"
+
+# step 1: Create a New Config File
+
+touch /var/lib/pgsql/15/data/custom_postgresql.conf
+chown postgres:postgres /var/lib/pgsql/15/data/custom_postgresql.conf
+chmod 777 /var/lib/pgsql/15/data/custom_postgresql.conf
+
+
+# step 2: Edit the Main Config to Include Your Custom File(At the bottom of the file)
+
+vim /var/lib/pgsql/15/data/postgresql.conf
+
+# Include custom configuration file
+include '/var/lib/pgsql/15/data/custom_postgresql.conf'
+
+
+# step 3: Add Your Custom Configurations
+vim /var/lib/pgsql/15/data/custom_postgresql.conf
+
+
+# Custom PostgreSQL settings
+
+# Connection Settings
+max_connections = 1000 # Similar to MySQL max_connections; default is 100
+listen_addresses = 'localhost'   # PostgreSQL IP connection; default is 'localhost'
+
+# Memory Settings (1/4 of RAM for shared_buffers)
+shared_buffers = 4GB   # If server RAM is 16GB, set it to 4GB; default is 128MB
+work_mem = 64MB   # Memory per query; default is 4MB
+maintenance_work_mem = 512MB   # Memory for maintenance tasks; default is 64MB
+
+# WAL (Write-Ahead Logging) and Checkpoint Tuning
+wal_buffers = 16MB   # Allocates memory for buffering WAL data before writing to disk; default is 16MB
+checkpoint_completion_target = 0.9 # Balances disk I/O and write performance; default is 0.5
+wal_writer_delay = 200ms   # Controls delay between WAL writes; default is 200ms
+
+# Background Writer and Caching
+bgwriter_lru_maxpages = 500   # Limits the number of dirty pages written at each cycle; default is 100
+bgwriter_delay = 50ms   # Delay between background writer rounds; default is 200ms
+
+# Query Optimizations
+effective_cache_size = 12GB   # Set to 3/4 of total RAM; default is 4GB
+random_page_cost = 1.1   # Optimize for SSDs; default is 4.0 for HDDs
+default_statistics_target = 100   # Improves query planner accuracy; default is 100
+
+# Logging
+log_directory = 'pg_log'   # Directory for PostgreSQL logs; default is 'log'
+log_filename = 'postgresql.log'   # Log file name; default is 'postgresql-%Y-%m-%d_%H%M%S.log'
+log_statement = 'all'   # Controls logging of SQL statements; default is 'none' mod(insert,update delete log), all(for all log)
+log_min_duration_statement = 500   # Log queries taking longer than 500ms; default is -1 (disabled)
+
+# Timeout Settings
+idle_in_transaction_session_timeout = 60000  # Terminate idle transactions after 60 seconds; default is 0 (disabled)
+statement_timeout = 300000   # Terminate statements running longer than 5 minutes; default is 0 (disabled)
+
+# Autovacuum Tweaks
+autovacuum_vacuum_threshold = 50   # Number of inserted/updated/deleted tuples before vacuum triggers; default is 50
+autovacuum_analyze_threshold = 50   # Number of changed tuples before analyze triggers; default is 50
+autovacuum_vacuum_cost_limit = 2000   # Cost limit for autovacuum operations; default is -1 (uses autovacuum_vacuum_cost_limit from postgresql.conf)
+
+
+
+
+# step 4: Reload PostgreSQL Configuration
+systemctl restart postgresql-15.service
+
+# step 5: Verify Configuration
+
+psql -U postgres -c "SHOW config_file;"
+psql -U postgres -c "SHOW max_connections;"
+psql -U postgres -c "SHOW shared_buffers;"
+
+
+#Now, whenever you need to tweak settings, you only need to edit custom_postgresql.conf instead of the main PostgreSQL config. 🚀
+
+
+
+# For more verifications:
+
+psql -U postgres -c "SHOW effective_cache_size;"
+psql -U postgres -c "SHOW work_mem;"
+psql -U postgres -c "SHOW log_directory;"
+psql -U postgres -c "SHOW random_page_cost;"
+
+
+For Test:
+
+ls -l /var/lib/pgsql/15/data/custom_postgresql.conf
+   chown postgres:postgres /var/lib/pgsql/15/data/custom_postgresql.conf
+
+
+grep "include" /var/lib/pgsql/15/data/postgresql.conf
+include '/var/lib/pgsql/15/data/custom_postgresql.conf'
+
+journalctl -u postgresql-15 --no-pager | tail -50
+
+
+
+# Final Check by query(before and after):
+
+SELECT
+    name AS setting_name,
+    setting AS setting_value,
+    unit AS setting_unit
+FROM pg_settings
+WHERE name IN (
+    'max_connections',
+    'shared_buffers',
+    'effective_cache_size',
+    'work_mem',
+    'maintenance_work_mem',
+    'autovacuum_max_workers',
+    'wal_buffers',
+    'effective_io_concurrency',
+    'random_page_cost',
+    'seq_page_cost',
+    'log_min_duration_statement'
+);
+
+--------------------------------------------------------------------------
+
+# CONNECTIONS & AUTHENTICATION
+max_connections = 1500
+listen_addresses = '*'
+
+# MEMORY SETTINGS
+shared_buffers = 48GB  # Increased for read-heavy workload
+work_mem = 128MB  # Increased for complex queries
+maintenance_work_mem = 4GB
+effective_cache_size = 96GB
+
+# WRITE-AHEAD LOG (WAL) SETTINGS
+wal_buffers = 128MB
+checkpoint_completion_target = 0.9
+min_wal_size = 2GB
+max_wal_size = 8GB
+
+# QUERY OPTIMIZATION
+effective_io_concurrency = 4  # Reduced for non-async I/O
+random_page_cost = 1.0
+default_statistics_target = 200
+
+# PARALLEL QUERY TUNING
+max_worker_processes = 8
+max_parallel_workers = 8
+max_parallel_workers_per_gather = 8  # Increased for parallelism
+max_parallel_maintenance_workers = 4
+
+# LOGGING SETTINGS
+log_statement = 'mod'
+log_min_duration_statement = 100  # Lowered to capture more slow queries
+log_lock_waits = on
+
+# TIMEOUT SETTINGS
+idle_in_transaction_session_timeout = 60000
+#statement_timeout = 60000
+
+# AUTOVACUUM SETTINGS
+autovacuum_vacuum_threshold = 50
+autovacuum_analyze_threshold = 50
+autovacuum_vacuum_cost_limit = 4000
+autovacuum_vacuum_scale_factor = 0.01  # More aggressive vacuuming
+autovacuum_analyze_scale_factor = 0.01
+
+lc_messages = 'en_US.UTF-8'                     # locale for system error message
+                                        # strings
+lc_monetary = 'en_US.UTF-8'                     # locale for monetary formatting
+lc_numeric = 'en_US.UTF-8'                      # locale for number formatting
+lc_time = 'en_US.UTF-8'                         # locale for time formatting
+datestyle = 'iso, mdy'
+log_timezone = 'Asia/Dhaka'
+log_line_prefix = '%m [%p] '
+timezone = 'Asia/Dhaka'
+
+default_text_search_config = 'pg_catalog.english'
+shared_preload_libraries = 'pg_stat_statements' # (change requires restart)
+
+
+pg_stat_statements.track = all
+pg_stat_statements.max = 10000
+pg_stat_statements.save = on
+
+include '/var/lib/pgsql/15/data/custom_postgresql.conf'
