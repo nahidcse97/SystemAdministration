@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Enter mysql user name
+user="root"
+# Enter mysql password
+password='******'
+db_host='localhost'
+#enter database name
+db_name="db_name"
+db_name1="db_name1"
+
+#enter backup location
+backup_path="/opt/db_backup/"
+#enter backup file name and date& time will be auto create
+back="back"
+back1="back1"
+
+DATE=$(date +"%m-%d-%Y-%H-%M-%S")
+
+
+mysqldump --single-transaction --user=$user --password=$password -h $db_host $db_name > $backup_path/$back-$DATE.sql&&cd $backup_path/&&zip -r $back-$DATE.zip $back-$DATE.sql&&rm -rf $back-$DATE.sql
+sleep 2s
+mysqldump --single-transaction --user=$user --password=$password -h $db_host $db_name1 > $backup_path/$back1-$DATE.sql&&cd $backup_path/&&zip -r $back1-$DATE.zip $back1-$DATE.sql&&rm -rf $back1-$DATE.sql
+sleep 2s
+sleep 3s
+
+rsync -av --rsh='ssh -p22331' /opt/db_backup/ root@ip_address:/u02/all_prismerp_backup/IP_Directory/
+
+echo -e "PrismERP ip_address Server Database Backup Successfully And Transfer Storage Server"  | mailx -v -s "PrismERP(ip_address)Server Database Backup Notification" -S smtp-use-starttls -S ssl-verify=ignore -S smtp-auth=login -S smtp=smtp://smtp.gmail.com:587 -S from="prismerpbackup@gmail.com" -S smtp-auth-user=prismerpbackup@gmail.com -S smtp-auth-password=npcnkillnkcowsrc -S ssl-verify=ignore -S nss-config-dir=~/.certs   backupinfo@divineit.net
+
+find /opt/db_backup/*  -mtime +3 -exec rm {} \;
+
+#####Crontab Information######
+
+1 1 * * * sh /opt/back.sh
+1 * * * * sh /opt/script/health.sh
