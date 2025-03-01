@@ -1,0 +1,112 @@
+#!/bin/bash
+THRESHOLD=60
+EMAIL="backupinfo@divineit.net"
+LOGFILE="/var/log/server-health-utilisations.log"
+SMTP_USER="prismerpbackup@gmail.com"
+SMTP_PASS="npcnkillnkcowsrc"
+SMTP_SERVER="smtp.gmail.com"
+SMTP_PORT="587"
+SERVER_NAME="PrismERP-UML"
+SERVER_DESCRIPTION="Server Health Report | PrismERP-UML | 103.204.80.26 | uml.prismerp.cloud"
+FROM_EMAIL="prismerpbackup@gmail.com"
+WEBHOOK_URL="https://chat.googleapis.com/v1/spaces/AAAAx-P3VEE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=xpDQMyie7kRwkVMnv2iq8qbU_hO-qrZwGJl1js-3reU"
+
+# Get the hostname
+HOSTNAME=$(hostname)
+
+# Set default status emoji to green circle
+STATUS_EMOJI="✅"
+SUBJECT_STATUS="Up"
+
+# Function to send email
+send_email() {
+    SUBJECT="$SERVER_DESCRIPTION - Resource Usage Alert [$STATUS_EMOJI $SUBJECT_STATUS]"
+    MESSAGE=$1
+    echo -e "$MESSAGE" | mailx -v -s "$SUBJECT" \
+        -S smtp-use-starttls \
+        -S ssl-verify=ignore \
+        -S smtp-auth=login \
+        -S smtp=smtp://$SMTP_SERVER:$SMTP_PORT \
+        -S from="$FROM_EMAIL" \
+        -S smtp-auth-user=$SMTP_USER \
+        -S smtp-auth-password=$SMTP_PASS \
+        -S nss-config-dir=~/.certs \
+        $EMAIL
+}
+
+# Function to send Google Chat notification
+send_google_chat() {
+    MESSAGE="$1" 
+    curl -X POST -H "Content-Type: application/json" \
+         -d "{\"text\": \"$STATUS_EMOJI $SERVER_DESCRIPTION - Resource Usage Alert\n$MESSAGE\"}" \
+         $WEBHOOK_URL
+}
+
+# Check CPU usage
+CPU_USAGE=$(sar -u 1 1 | grep "Average" | awk '{print 100 - $8}')
+echo "$(date +'%Y-%m-%d %H:%M:%S') CPU Usage: ${CPU_USAGE}%" >> $LOGFILE
+
+# Check CPU load average (1-minute load average)
+CPU_LOAD=$(uptime | awk -F'load average:' '{ print $2 }' | awk '{print $1}' | sed 's/,//')
+echo "$(date +'%Y-%m-%d %H:%M:%S') CPU Load Average (1 min): ${CPU_LOAD}" >> $LOGFILE
+
+# Check RAM usage
+MEMORY=$(free | grep Mem)
+USED=$(echo $MEMORY | awk '{print $3}')
+TOTAL=$(echo $MEMORY | awk '{print $2}')
+RAM_USAGE=$(echo "scale=2; $USED/$TOTAL * 100" | bc)
+echo "$(date +'%Y-%m-%d %H:%M:%S') RAM Usage: ${RAM_USAGE}%" >> $LOGFILE
+
+# Check disk usage
+DISK_USAGE=$(df -h / | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 }' | sed 's/%//g')
+echo "$(date +'%Y-%m-%d %H:%M:%S') Disk Usage: ${DISK_USAGE}%" >> $LOGFILE
+
+# Initialize a message variable with hostname
+MESSAGE="Resource Usage on $SERVER_NAME (Hostname: $HOSTNAME):\n\nCPU Usage: ${CPU_USAGE}%\nCPU Load Average (1 min): ${CPU_LOAD}\nRAM Usage: ${RAM_USAGE}%\nDisk Usage: ${DISK_USAGE}%\n\n"
+
+alert_sent=0
+
+# Check CPU usage threshold
+if (( $(echo "$CPU_USAGE > $THRESHOLD" | bc -l) )); then
+    STATUS_EMOJI="🔴"
+    SUBJECT_STATUS="Alert"
+    MAX_CPU_PROCESS=$(ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 2 | tail -n 1)
+    PID=$(echo $MAX_CPU_PROCESS | awk '{print $1}')
+    COMMAND=$(echo $MAX_CPU_PROCESS | awk '{print $2}')
+    CPU_PERCENT=$(echo $MAX_CPU_PROCESS | awk '{print $3}')
+    MEM_PERCENT=$(echo $MAX_CPU_PROCESS | awk '{print $4}')
+
+    MESSAGE+="\nCPU Usage Alert: CPU usage is above ${THRESHOLD}%: ${CPU_USAGE}%. CPU Load Average: ${CPU_LOAD}. Highest CPU usage process: $COMMAND (PID: $PID, CPU: $CPU_PERCENT%, RAM: $MEM_PERCENT%)"
+    alert_sent=1
+fi
+
+# Check RAM usage threshold
+if (( $(echo "$RAM_USAGE > $THRESHOLD" | bc -l) )); then
+    STATUS_EMOJI="🔴"
+    SUBJECT_STATUS="Alert"
+    MAX_RAM_PROCESS=$(ps -eo pid,comm,%mem --sort=-%mem | head -n 2 | tail -n 1)
+    PID=$(echo $MAX_RAM_PROCESS | awk '{print $1}')
+    PROCESS_NAME=$(echo $MAX_RAM_PROCESS | awk '{print $2}')
+    RAM_PERCENTAGE=$(echo $MAX_RAM_PROCESS | awk '{print $3}')
+
+    MESSAGE+="\nRAM Usage Alert: RAM usage is above ${THRESHOLD}%: ${RAM_USAGE}%. Highest RAM usage process: PID $PID ($PROCESS_NAME, $RAM_PERCENTAGE%)"
+    alert_sent=1
+fi
+
+# Check disk usage threshold
+if (( DISK_USAGE > THRESHOLD )); then
+    STATUS_EMOJI="🔴"
+    SUBJECT_STATUS="Alert"
+    MESSAGE+="\nDisk Usage Alert: Disk usage is above ${THRESHOLD}%: ${DISK_USAGE}%"
+    alert_sent=1
+fi
+
+# Send email and Google Chat message if any alert was triggered
+if [ $alert_sent -eq 1 ]; then
+    send_email "$MESSAGE"
+    send_google_chat "$MESSAGE"
+fi
+
+
+####Crontab Information######
+1 * * * * sh /opt/script/health.sh
