@@ -1,0 +1,33 @@
+Configuring Procedure
+
+Adding User: 
+sudo adduser sftpuser
+sudo passwd sftpuser
+
+Creating Directory:
+
+sudo mkdir -p /var/sftp/files
+sudo chown sftpuser:sftpuser /var/sftp/files
+sudo chown root:root /var/sftp
+sudo chmod 755 /var/sftp
+
+Configuring SSH:
+
+sudo vim /etc/ssh/sshd_config
+     
+    Match User sftpuser
+	ForceCommand internal-sftp
+	PasswordAuthentication yes
+	ChrootDirectory /var/sftp
+	PermitTunnel no
+	AllowAgentForwarding no
+	AllowTcpForwarding no
+	X11Forwarding no
+
+sudo systemctl restart sshd.service
+
+Test the Connection:
+
+sftp sftpuser@divineit.net
+
+You can also FileZilla and WinSCP to check if the connection is ok or not.
