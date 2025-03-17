@@ -14,13 +14,13 @@ for /f "tokens=1-2 delims=: " %%a in ('time /t') do (
 set timestamp=%year%-%month%-%day%_%hour%-%minute%
 
 :: Set MySQL user credentials
-set MYSQL_USER=weplan
-set MYSQL_PASSWORD=WePlan#Ara22)#DiV@
+set MYSQL_USER=user_name
+set MYSQL_PASSWORD=pass_word
 
 :: Set database names and backup directory
-set DATABASE_NAME_1=pib_linespay_com
-set DATABASE_NAME_2=prism_cas
-set BACKUP_DIR=C:\Plan_DB_backup
+set DATABASE_NAME_1=db_name_1
+set DATABASE_NAME_2=db_name_2
+set BACKUP_DIR=C:\directory
 
 :: Create backup for the first database
 mysqldump -u %MYSQL_USER% -p%MYSQL_PASSWORD% %DATABASE_NAME_1% > %BACKUP_DIR%\plan_linespay_%timestamp%.sql
