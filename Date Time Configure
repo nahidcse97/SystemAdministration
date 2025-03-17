@@ -1,0 +1,43 @@
+        echo "#-------------------------------------------------------------------------#";
+        echo "#   Author                # Sheikh Nahid Uddin                              #";
+        echo "#   Script                # Prism Environment                             #";
+        echo "#   Version               $version                  1.0.0                 #";
+        echo "#   Version               $version                  1.2.0                 #";
+        echo "#   Modified              $modified                                       #";
+        echo "#   Current date and time # $var_date_time                                #";
+        echo "#                                                                         #";
+yum group install "Development Tools" -y
+yum install vim wget -y
+
+echo "Configuring Date and Time"
+
+ln -sf /usr/share/zoneinfo/CET /etc/localtime
+
+cat <<EOF >/etc/sysconfig/clock 
+ZONE="Asia/Dhaka"
+UTC=true
+ARC=false
+EOF
+
+ln -sf /usr/share/zoneinfo/Asia/Dhaka  /etc/localtime
+yum -y install ntp
+ntpdate "pool.ntp.org" && hwclock -w
+
+
+
+service ntpd start
+service ntpd stop
+/usr/sbin/ntpdate pool.ntp.org
+
+
+
+date 
+hwclock -w
+hwclock --show
+
+/sbin/service ntpd start
+/sbin/service ntpd enable
+/sbin/chkconfig --level 345 ntpd on
+
+echo "Changing Selinux State"
+setenforce 0
