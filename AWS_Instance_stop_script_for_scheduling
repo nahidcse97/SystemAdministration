@@ -1,0 +1,25 @@
+#!/bin/bash
+echo "Stopping Instances Of EduMan : ap-southeast-1 "
+
+echo "Stopping Instances Of UI : 01_UI-EDUMAN, 05_UI_Netiworld, 07_UI_NetiCMS"
+
+aws ec2 stop-instances --instance-ids  i-03457ed3794fa8a5f
+
+aws ec2 stop-instances --instance-ids  i-0c8c26d4079f25dce
+
+aws ec2 stop-instances --instance-ids  i-0498b141cbfaea586
+
+
+
+echo "Stopping Instances Of API : 02_API_EduMan, 06_API_Netiworld, 08_API_NetiCMS, 11_API_YSS, 10_SMS_YSS_Pool_Netizen"
+
+
+aws ec2 stop-instances --instance-ids  i-03457ed3794fa8a5f
+
+aws ec2 stop-instances --instance-ids  i-0045180556a45b2e2
+
+aws ec2 stop-instances --instance-ids  i-0d58245b1019d79a0
+
+aws ec2 stop-instances --instance-ids  i-02d594a9af496d268
+
+aws ec2 stop-instances --instance-ids  i-06502c648c6f5ce72
