@@ -1,0 +1,14 @@
+#!/bin/bash
+#auther:System Sarkar
+# Enter mysql user name
+
+#enter backup location
+backup_path="/var/databbase_postgress"
+#enter backup file name and date& time will be auto create
+back="demo_blp"
+back1="cas"
+DATE=$(date +"%m-%d-%Y-%H-%M-%S")
+PGPASSWORD="ere" pg_dump  -U Divine demo_blp  --verbose --format=c --blobs  > $backup_path/$back-$DATE.sql&&cd $backup_path/&&zip -r $back-$DATE.zip $back-$DATE.sql&&rm -rf $back-$DATE.sql&&sshpass -p "erer" scp -r -P22339     $backup_path/$back-$DATE.zip backup@IP:/dbbackup
+
+sleep 4
+PGPASSWORD="re" pg_dump  -U Divine cas  --verbose --format=c --blobs  > $backup_path/$back1-$DATE.sql&&cd $backup_path/&&zip -r $back1-$DATE.zip $back1-$DATE.sql&&rm -rf $back1-$DATE.sql&&sshpass -p "er" scp -r -P22339     $backup_path/$back1-$DATE.zip backup@ip:/dbbackup
