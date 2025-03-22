@@ -1,0 +1,89 @@
+------------MySQL Installation------------
+
+yum --enablerepo=mysql80-community install mysql mysql-server mysql-client mysql-devel
+
+yum -y groupinstall "Development tools"
+
+yum install gcc glibc-devel make ncurses-devel openssl-devel autoconf zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gdbm-devel db4-devel libpcap-devel xz-devel mongodb-org java-1.8.0
+
+yum install libxslt-devel libxml2-devel python-devel httpd httpd-tools apr-devel apr-util-devel httpd-devel -y
+
+
+
+-------mysql installation Start------
+ 
+ yum install https://repo.mysql.com/mysql80-community-release-el7.rpm && yum --disablerepo=AppStream install -y  mysql-community-server*
+ yum install mysql-community-server mysql-community-devel mysql-community-libs
+ 
+ service mysqld start
+ grep "A temporary password" /var/log/mysqld.log
+ mysql_secure_installation
+step by step upore theke jaiyen
+
+ yum install https://dev.mysql.com/get/mysql80-community-release-el8-7.noarch.rpm && yum --disablerepo=AppStream install -y  mysql-community-server*
+
+
+-------------MySQL Tunning Procedure-------------------
+
+wget https://raw.githubusercontent.com/major/MySQLTuner-perl/master/mysqltuner.pl
+
+chmod +x mysqltuner.pl
+
+./mysqltuner.pl
+
+vim /etc/my.cnf
+
+#At last added
+
+innodb_file_per_table=ON
+innodb_buffer_pool_instances=4
+
+service mysqld restart
+
+./mysqltuner.pl
+
+
+-------------NGINX Install procedure-------------------
+
+vim /etc/yum.repos.d/nginx.repo
+
+
+[nginx-stable]
+name=nginx stable repo
+baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://nginx.org/keys/nginx_signing.key
+module_hotfixes=true
+
+yum clean all
+
+yum install nginx
+
+yum install https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/p/python-daemon-1.6-4.el7.noarch.rpm
+
+yum install yum-utils
+
+yum install nginx
+
+service nginx status
+
+service nginx start
+
+virtualhost Dir: /etc/nginx/conf.d
+
+-------------------- PostgresSQL 12 Installation Procedure ---------------------------------
+
+https://computingforgeeks.com/how-to-install-postgresql-12-on-centos-7/
+
+
+
+Pip installation & virtualenv installation
+
+https://blog.teststation.org/centos/python/2016/05/11/installing-python-virtualenv-centos-7/
+
+-------------Mysql Installation-------------------
+
+https://tecadmin.net/install-mysql-8-on-centos/
+
+
