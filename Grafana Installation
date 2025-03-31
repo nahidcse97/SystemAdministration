@@ -1,0 +1,253 @@
+To get started, we will add the Grafana repository on our local system to take advantage of updates as they are rolled out. Therefore, create a repository file as shown.
+
+#  vim /etc/yum.repos.d/grafana.repo
+
+Next, paste the entire code provided below on the file and save the changes.
+
+Next add repo and install grafana
+
+# sudo dnf update -y&&  dnf install grafana -y
+
+Start and Enable Grafana
+
+# systemctl start grafana-server&&systemctl enable  grafana-server
+
+service running 3000 port so we need install nginx and setup proxy
+
+ Install the prerequisites:
+
+    sudo yum install yum-utils
+
+To set up the yum repository, create the file named /etc/yum.repos.d/nginx.repo with the following contents:
+
+    [nginx-stable]
+    name=nginx stable repo
+    baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
+    gpgcheck=1
+    enabled=1
+    gpgkey=https://nginx.org/keys/nginx_signing.key
+    module_hotfixes=true
+
+## yum install nginx -y
+
+Than go nginx config folder  add below config
+
+
+server {
+    listen  80;
+
+    server_name monitor.prismerp.cloud;
+        location / {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_connect_timeout       3600;
+        proxy_send_timeout          3600;
+        proxy_read_timeout          3600;
+        send_timeout                3600;
+
+    }
+}
+~     
+
+
+
+
+Create Prometheus System User and Group
+
+Run the command below to create prometheus system user and group.
+
+useradd -M -r -s /bin/false prometheus
+add prometheus
+wget https://github.com/prometheus/prometheus/releases/download/v2.42.0-rc.0/prometheus-2.42.0-rc.0.linux-amd64.tar.gz
+
+
+extract file
+
+tar -xf  prometheus-2.42.0-rc.0.linux-amd64.tar.gz
+
+cd prometheus-2.42.0-rc.0.linux-amd64
+
+
+Copy the two Prometheus binary files, prometheus and promtool, under the extracted Prometheus archive directory to the /usr/local/bin directory.
+
+#cp prometheus /usr/local/bin/
+#cp promtool  /usr/local/bin/
+
+Copy the consoles/ and console_libraries/ directories to /etc/prometheus directory created above.
+
+#cp -r console_libraries /etc/prometheus
+#cp -rf consoles /etc/prometheus
+
+
+The sample Prometheus configuration file, prometheus.yml, is located under the extracted archive directory.
+
+#cp prometheus.yml /etc/prometheus/
+
+
+Run the command below to set the ownership (owner and group) of Prometheus configuration files and directories to prometheus.
+
+#chown -R prometheus:prometheus /etc/prometheus
+
+#chown -R prometheus:prometheus /var/lib/prometheus
+
+#chown prometheus.prometheus /usr/local/bin/{prometheus,promtool}
+
+
+Create Prometheus Systemd Service file
+
+To be able to run Prometheus as a service, you need to create a systemd service file, /etc/systemd/system/prometheus.service, configured as follows.
+
+
+[Unit]
+Description=Prometheus Time Series Collection and Processing Server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/prometheus \
+    --config.file /etc/prometheus/prometheus.yml \
+    --storage.tsdb.path /var/lib/prometheus/ \
+    --web.console.templates=/etc/prometheus/consoles \
+    --web.console.libraries=/etc/prometheus/console_libraries
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+sudo yum -y install epel-release
+sudo yum -y install python3-bcrypt
+
+Once installed, create a python script that will prompt for the password.
+
+$ vim gen-pass.py
+import getpass
+import bcrypt
+
+password = getpass.getpass("password: ")
+hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+print(hashed_password.decode())
+
+Save the script and run it as below:
+
+python3 gen-pass.py
+
+Proceed and provide the preferred password:
+
+password: <INPUT-PASSWORD>
+$2b$12$.9J0cFyfcLaNjwBW9McDWObbLjM0n0Wb0ToW9wZArxfmwVlctK8SS
+
+Save the generated password somewhere, you will need it in the below steps.
+Step 2 – Creating Web YAML File
+
+Proceed and create a YAML Prometheus Web configuration file to be loaded. This file will be read upon each HTTP request. For this guide, I have my YAML file at /etc/prometheus/ as web.yml. Now add the authentication to the end points as below:
+
+$ sudo vim /etc/prometheus/web.yml
+basic_auth_users:
+       admin: '$2b$12$.9J0cFyfcLaNjwBW9McDWObbLjM0n0Wb0ToW9wZArxfmwVlctK8SS'
+
+Replace $2b$12$.9J0cFyfcLaNjwBW9McDWObbLjM0n0Wb0ToW9wZArxfmwVlctK8SS with your encrypted password value.
+
+You can validate that file with the commands below.
+
+$ promtool check web-config /etc/prometheus/web.yml
+/etc/prometheus/web.yml SUCCESS
+
+
+
+
+Step 3 – Launch Prometheus Server
+
+Now we will launch the Prometheus Server using the created web configurations.
+
+Update your Prometheus systemd unit file to include Web configuration file we just created.
+
+sudo vim /etc/systemd/system/prometheus.service 
+[Unit]
+Description=Prometheus
+Documentation=https://prometheus.io/docs/introduction/overview/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Environment="GOMAXPROCS=1"
+User=prometheus
+Group=prometheus
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --web.config.file=/etc/prometheus/web.yml \
+  --storage.tsdb.path=/var/lib/prometheus \
+  --web.console.templates=/etc/prometheus/consoles \
+  --web.console.libraries=/etc/prometheus/console_libraries \
+  --web.listen-address=0.0.0.0:9090 \
+  --web.external-url=
+
+SyslogIdentifier=prometheus
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+You may also need to restart the Prometheus Server.
+
+
+
+
+
+
+For agent install node_expoter
+
+add user 
+
+cd /tmp
+useradd -m -s /bin/false node_exporter
+
+wget https://github.com/prometheus/node_exporter/releases/download/v1.5.0/node_exporter-1.5.0.linux-amd64.tar.gz
+
+ tar -xf node_exporter-1.5.0.linux-amd64.tar.gz 
+
+ cd /tmp/node_exporter-1.5.0.linux-amd64
+
+ cp node_exporter /usr/local/bin 
+ chown node_exporter:node_exporter /usr/local/bin/node_exporter
+
+
+vim /etc/systemd/system/node_exporter.service 
+
+
+[Unit]
+Description=Prometheus Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+
+start service
+
+systemctl enable node_exporter.service
+systemctl start node_exporter.service
+
+
+add firewalld service
+
+firewall-cmd --permanent   --add-rich-rule='rule family="ipv4" source address="103.106.118.198/28" port protocol="tcp" port="9100" accept'
+
+
+firewall-cmd --reload
+
+

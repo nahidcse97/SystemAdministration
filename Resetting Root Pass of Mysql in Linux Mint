@@ -1,0 +1,105 @@
+Let's start by stopping the currently running MySQL database.
+
+```
+$ sudo systemctl stop mysql.service
+```
+
+Next, create set proper permission to the folder to be used by MySQL process to store and access socket file.
+
+```
+$ sudo mkdir -p /var/run/mysqld
+$ sudo chown mysql:mysql /var/run/mysqld
+```
+
+
+Then, we can start MySQL with some options.
+
+```
+$ sudo /usr/sbin/mysqld --skip-grant-tables --skip-networking &
+```
+
+
+Verify the the process is running as expected.
+
+```
+$ jobs
+
+[1]+  Running                 mysqld --skip-grant-tables --skip-networking &
+```
+
+
+Now we can access MySQL database without password.
+
+```
+$ mysql -u root
+```
+
+Let's flush the session.
+
+```
+mysql> FLUSH PRIVILEGES;
+
+Query OK, 0 rows affected (0.00 sec)
+```
+
+
+Select the database to be use.
+
+```
+mysql> use mysql;
+
+Database changed
+```
+
+
+Update the root password. 
+
+```
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY 'Div@123!!';
+
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+Rows matched: 1  Changed: 0  Warnings: 1
+```
+*For this example, I just use `secret`, but please, use something else.*
+
+
+We have to set plugin for the root.
+
+```
+mysql> UPDATE user SET plugin="mysql_native_password" WHERE User='root';
+
+Query OK, 0 rows affected (0.00 sec)
+Rows matched: 1  Changed: 0  Warnings: 0
+```
+
+
+We're done here, so we can quit the session:
+
+```
+mysql> quit
+```
+
+
+Now, we need to stop the current MySQL process:
+
+```
+$ sudo pkill mysqld
+```
+
+
+Verify the process is terminated:
+
+```
+$ jobs
+
+[1]+  Done                    mysqld --skip-grant-tables --skip-networking
+```
+
+
+Finally, start MySQL process.
+
+```
+$ sudo systemctl start mysql.service
+```
+
+Done!
