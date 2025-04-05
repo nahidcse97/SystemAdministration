@@ -1,0 +1,99 @@
+#!/bin/bash
+# Enter mysql username
+user="root"
+# Enter mysql password
+password="DIV@1Dhaka200G!@@#(&%)#"
+
+# Enter the query file path
+
+query_path="/opt/tomcat9/vhost/berc_acc_prismerp_cloud/query.sql"
+
+# Enter databases name
+
+db_name="berc_acc_prismerp_cloud"
+db_name1="berc_bapex_prismerp_cloud"
+db_name2="berc_berc_prismerp_cloud"
+db_name3="berc_bgdcl_prismerp_cloud"
+db_name4="berc_bgfcl_prismerp_cloud"
+db_name5="berc_gtcl_prismerp_cloud"
+db_name6="berc_jgtdsl_prismerp_cloud"
+db_name7="berc_kgdcl_prismerp_cloud"
+db_name8="berc_petrobangla_prismerp_cloud"
+db_name9="berc_pgcl_prismerp_cloud"
+db_name10="berc_rpgcl_prismerp_cloud"
+db_name11="berc_sgcl_prismerp_cloud"
+db_name12="berc_sgfl_prismerp_cloud"
+db_name13="berc_tgtdcl_prismerp_cloud"
+
+
+mysql --user=$user --password=$password $db_name < $query_path
+
+echo "Query executed on $db_name"
+sleep 3
+
+mysql --user=$user --password=$password $db_name1 < $query_path
+
+echo "Query executed on $db_name1"
+sleep 3
+
+mysql --user=$user --password=$password $db_name2 < $query_path
+
+echo "Query executed on $db_name2"
+sleep 3
+
+mysql --user=$user --password=$password $db_name3 < $query_path
+
+echo "Query executed on $db_name3"
+sleep 3
+
+mysql --user=$user --password=$password $db_name4 < $query_path
+
+echo "Query executed on $db_name4"
+sleep 3
+
+mysql --user=$user --password=$password $db_name5 < $query_path
+
+echo "Query executed on $db_name5"
+sleep 3
+
+mysql --user=$user --password=$password $db_name6 < $query_path
+
+echo "Query executed on $db_name6"
+sleep 3
+
+mysql --user=$user --password=$password $db_name7 < $query_path
+
+echo "Query executed on $db_name7"
+sleep 3
+
+mysql --user=$user --password=$password $db_name8 < $query_path
+
+echo "Query executed on $db_name8"
+sleep 3
+
+mysql --user=$user --password=$password $db_name9 < $query_path
+
+echo "Query executed on $db_name9"
+sleep 3
+
+mysql --user=$user --password=$password $db_name10 < $query_path
+
+echo "Query executed on $db_name10"
+sleep 3
+
+mysql --user=$user --password=$password $db_name11 < $query_path
+
+echo "Query executed on $db_name11"
+sleep 3
+
+mysql --user=$user --password=$password $db_name12 < $query_path
+
+echo "Query executed on $db_name12"
+sleep 3
+
+mysql --user=$user --password=$password $db_name13 < $query_path
+
+echo "Query executed on $db_name13"
+sleep 3
+
+echo "Query Executed on All Databases"

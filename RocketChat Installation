@@ -1,0 +1,41 @@
+dnf  install epel-release
+systemctl enable snapd
+
+ln -s /var/lib/snapd/snap /snap
+systemctl start snapd
+systemctl status  snapd
+
+##Install Rocket.Chat with snapd
+
+snap install rocketchat-server
+
+##You can check on the status of Rocket.Chat with:
+sudo service snap.rocketchat-server.rocketchat-server status
+
+##You can also check on the status of Mongo
+sudo service snap.rocketchat-server.rocketchat-mongo status
+
+##To see the logs from Rocket.Chat:
+sudo journalctl -f -u snap.rocketchat-server.rocketchat-server
+##To restart Rocket.Chat:
+sudo service snap.rocketchat-server.rocketchat-server restart
+
+
+
+##backup my snap data
+
+sudo service snap.rocketchat-server.rocketchat-server stop
+sudo snap run rocketchat-server.backupdb
+
+
+##restore backup data 
+sudo service snap.rocketchat-server.rocketchat-server stop
+
+##Copy your backup file to the snap's common folder
+sudo cp rocketchat_backup.tgz /var/snap/rocketchat-server/common/
+
+##restore command
+sudo snap run rocketchat-server.restoredb /var/snap/rocketchat-server/common/rocketchat_backup.tgz
+
+##Start your rocketchat-server
+sudo service snap.rocketchat-server.rocketchat-server start

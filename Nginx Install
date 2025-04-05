@@ -1,0 +1,18 @@
+vim /etc/yum.repos.d/nginx.repo
+
+
+[nginx-stable]
+name=nginx stable repo
+baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://nginx.org/keys/nginx_signing.key
+module_hotfixes=true
+
+yum clean all
+yum install nginx
+yum install https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/p/python-daemon-1.6-4.el7.noarch.rpm
+yum install yum-utils
+yum install nginx
+service nginx status
+service nginx start

@@ -1,0 +1,31 @@
+## Automatically Mail and Start a Service When it Goes Down Using Systemd Service | CentOS -7,8,9 | Rocky Linux - 8,9 
+
+
+# yum install gawk
+# yum install mailx
+
+
+    #!/bin/bash
+    serv=nginx
+    sstat=dead
+    systemctl status $serv | grep -i 'running\|dead' | awk '{print $3}' | sed 's/[()]//g' | while read output;
+    do
+    echo $output
+    if [ "$output" == "$sstat" ]; then
+        systemctl start $serv
+        echo -e "$serv service is UP now.!"  | mailx -v -s "Nginx Service is DOWN and restarted now On $(hostname)" -S smtp-use-starttls -S ssl-verify=ignore -S smtp-auth=login -S smtp=smtp://smtp.gmail.com:587 -S from="prismerpbackup@gmail.com" -S smtp-auth-user=prismerpbackup@gmail.com -S smtp-auth-password=npcnkillnkcowsrc -S ssl-verify=ignore -S nss-config-dir=~/.certs         backupinfo@divineit.net
+        else
+        echo "$serv service is running"
+        fi
+    done
+
+
+
+Set executable permission to service_mon.sh file.
+# chmod +x /opt/service_mon.sh
+
+Finally, add a cron job to automate this. It will run every 20 minutes.
+
+# crontab -e
+
+    */5 * * * * sh /opt/service_mon.sh

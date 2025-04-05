@@ -1,0 +1,14 @@
+yum install python3
+yum install libxslt-devel libxml2-devel python36-devel
+yum install python3-tkinter python3-tk
+
+pip3 install virtualenv
+
+virtualenv --python=python3 .venv
+or
+/usr/local/bin/virtualenv -p python3 .venv
+
+source .venv/bin/activate
+
+-- Alternative process of pip requirement install
+pip install -r requirements.txt --use-deprecated=legacy-resolver

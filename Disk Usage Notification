@@ -1,0 +1,13 @@
+#!/bin/bash
+# PrismERP Server's Disk Usage Notification
+date '+%d/%m/%y %H:%M%S'>time
+        var_date_time=$(<time);
+        date '+%d/%m/%y %H:%M:%S'>time
+        var_date_time=$(<time);
+
+FS="/"
+THRESHOLD=90
+OUTPUT=($(LC_ALL=C df -P ${FS}))
+CURRENT=$(echo ${OUTPUT[11]} | sed 's/%//')
+[ $CURRENT -gt $THRESHOLD ] && echo " Your root partition remaining free space is critically low. Current usage $CURRENT% Please have a check and take initiatives as soon as possible" | mailx -v -s "Disk Space Alert | 182.48.80.182 | PrismERP | $var_date_time " -S smtp-use-starttls -S ssl-verify=ignore -S smtp-auth=login -S smtp=smtp://smtp.gmail.com:587 -S from="prismerpbackup@gmail.com" -S smtp-auth-user=prismerpbackup@gmail.com -S smtp-auth-password=npcnkillnkcowsrc -S ssl-verify=ignore -S nss-config-dir=~/.certs         nahid.cse97@gmail.com
+

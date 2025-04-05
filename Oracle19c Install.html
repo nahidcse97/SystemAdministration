@@ -1,0 +1,298 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oracle 19C Install</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h2 id="install-oracle-database-19c-on-rocky-linux-8--centos-8">Install Oracle Database 19c on Rocky Linux 8 / CentOS 8</h2>
+<p>Update Rocky Linux 8/CentOS 8 Software Packages:</p>
+<pre><code>[root@oracle-db-19c ~]# dnf update -y
+</code></pre>
+<h4 id="configure-local-dns-resolver-in-rocky-linux-8--centos-8">Configure Local DNS Resolver in Rocky Linux 8 / CentOS 8:</h4>
+<p>Add the required name resolution directive in Local DNS Resolver <strong>(/etc/hosts)</strong> file.</p>
+<pre><code>[root@oracle-db-19c ~]# echo "103.106.118.100 oracle-db-19c.prismerp.cloud oracle-db-19c" &gt;&gt; /etc/hosts
+</code></pre>
+<h4 id="install-oracle-database-19c-prerequisites-on-rocky-linux-8centos-8">Install Oracle Database 19c Prerequisites on Rocky Linux 8/CentOS 8:</h4>
+<p>Oracle Database 19c requires some software packages, therefore, we are installing these packages before moving forward.</p>
+<p>We can install Oracle Database 19c prerequisites using <strong>dnf</strong> command.</p>
+<pre><code>[root@oracle-db-19c ~]# dnf install -y bc \
+&gt; binutils \
+&gt; elfutils-libelf \
+&gt; elfutils-libelf-devel \
+&gt; fontconfig-devel \
+&gt; glibc \
+&gt; glibc-devel \
+&gt; ksh \
+&gt; libaio \
+&gt; libaio-devel \
+&gt; libXrender \
+&gt; libXrender-devel \
+&gt; libX11 \
+&gt; libXau \
+&gt; libXi \
+&gt; libXtst \
+&gt; libgcc \
+&gt; librdmacm-devel \
+&gt; libstdc++ \
+&gt; libstdc++-devel \
+&gt; libxcb \
+&gt; make \
+&gt; net-tools \
+&gt; smartmontools \
+&gt; sysstat \
+&gt; unzip \
+&gt; libnsl \
+&gt; libnsl2
+</code></pre>
+<h4 id="create-users-and-groups-for-oracle-database-19c">Create Users and Groups for Oracle Database 19c:</h4>
+<pre><code>[root@oracle-db-19c ~]# groupadd -g 1501 oinstall
+[root@oracle-db-19c ~]# groupadd -g 1502 dba
+[root@oracle-db-19c ~]# groupadd -g 1503 oper
+[root@oracle-db-19c ~]# groupadd -g 1504 backupdba
+[root@oracle-db-19c ~]# groupadd -g 1505 dgdba
+[root@oracle-db-19c ~]# groupadd -g 1506 kmdba
+[root@oracle-db-19c ~]# groupadd -g 1507 racdba
+[root@oracle-db-19c ~]# useradd -u 1501 -g oinstall -G dba,oper,backupdba,dgdba,kmdba,racdba oracle
+[root@oracle-db-19c ~]# echo "oracle" | passwd oracle --stdin
+Changing password for user oracle.
+passwd: all authentication tokens updated successfully.
+</code></pre>
+<h4 id="set-security-limits-for-oracle-user">Set Security limits for Oracle user:</h4>
+<p>Create <strong>30-oracle.conf</strong> configuration file in <strong>/etc/security/limits.d</strong> directory, to set the security limits for the <strong>oracle</strong> user.</p>
+<pre><code>[root@oracle-db-19c ~]# vi /etc/security/limits.d/30-oracle.conf
+</code></pre>
+<p>And add following directives therein.</p>
+<pre><code>oracle   soft   nofile    1024
+oracle   hard   nofile    65536
+oracle   soft   nproc    16384
+oracle   hard   nproc    16384
+oracle   soft   stack    10240
+oracle   hard   stack    32768
+oracle   hard   memlock    134217728
+oracle   soft   memlock    134217728
+</code></pre>
+<h4 id="adjust-kernel-parameters-in-centos-8">Adjust Kernel Parameters in CentOS 8:</h4>
+<p>Set the following Kernel parameters as required by the Oracle Database 19c.</p>
+<p>Create <strong>98-oracle.conf</strong> configuration file in <strong>/etc/sysctl.d</strong> directory.</p>
+<pre><code>[root@oracle-db-19c ~]# vi /etc/sysctl.d/98-oracle.conf
+</code></pre>
+<p>And add set following Kernel parameters in this file.</p>
+<pre><code>fs.file-max = 6815744
+kernel.sem = 250 32000 100 128
+kernel.shmmni = 4096
+kernel.shmall = 1073741824
+kernel.shmmax = 4398046511104
+kernel.panic_on_oops = 1
+net.core.rmem_default = 262144
+net.core.rmem_max = 4194304
+net.core.wmem_default = 262144
+net.core.wmem_max = 1048576
+net.ipv4.conf.all.rp_filter = 2
+net.ipv4.conf.default.rp_filter = 2
+fs.aio-max-nr = 1048576
+net.ipv4.ip_local_port_range = 9000 65500
+</code></pre>
+<p>Reload Kernel parameters now by using <strong>sysctl</strong> command.</p>
+<pre><code>[root@oracle-db-19c ~]# sysctl -p
+</code></pre>
+<h4 id="configure-selinux-mode-in-rocky-linux-8centos-8">Configure SELinux Mode in Rocky Linux 8/CentOS 8:</h4>
+<p>Persistently set SELinux mode to permissive.</p>
+<pre><code>[root@oracle-db-19c ~]# sed -i 's/^SELINUX=.*/SELINUX=permissive/g' /etc/selinux/config
+[root@oracle-db-19c ~]# setenforce permissive
+</code></pre>
+<h4 id="linux-firewall-configuration-for-oracle-database-19c">Linux Firewall Configuration for Oracle Database 19c:</h4>
+<p>Allow <em><em>Oracle SQL</em> Net Listener</em>* port <strong>1521/tcp</strong> in CentOS 8 Firewall</p>
+<pre><code>[root@oracle-db-19c ~]# firewall-cmd --permanent --add-port=1521/tcp
+success
+[root@oracle-db-19c ~]# firewall-cmd --reload
+success
+</code></pre>
+<h4 id="create-directories-for-oracle-database-19c">Create Directories for Oracle Database 19c:</h4>
+<p>To install Oracle Database 19c software, create the necessary directories and adjust the ownership and permissions on these directories.</p>
+<pre><code>[root@oracle-db-19c ~]# mkdir -p /u01/app/oracle/product/19.3.0/dbhome_1
+[root@oracle-db-19c ~]# mkdir -p /u02/oradata
+[root@oracle-db-19c ~]# chown -R oracle:oinstall /u01 /u02
+[root@oracle-db-19c ~]# chmod -R 775 /u01 /u02
+</code></pre>
+<p>Here, we have created two directories, <strong>/u01</strong> for the <strong>Oracle RDBMS</strong> and <strong>/u02</strong> for the <strong>Oracle Databases</strong>.</p>
+<h4 id="configure-linux-environment-for-oracle-user">Configure Linux Environment for Oracle User:</h4>
+<p>Connect as <strong>oracle</strong> user.</p>
+<pre><code>[root@oracle-db-19c ~]# su - oracle
+[oracle@oracle-db-19c ~]$
+</code></pre>
+<p>Edit <strong>oracle</strong> user’s <strong>.bash_profile</strong>.</p>
+<pre><code>[oracle@oracle-db-19c ~]$ vi ~/.bash_profile
+</code></pre>
+<p>And add following configurations at the end of this file.</p>
+<pre><code># Oracle Settings
+export TMP=/tmp
+export TMPDIR=$TMP
+
+export ORACLE_HOSTNAME=oracle-db-19c.centlinux.com
+export ORACLE_UNQNAME=cdb1
+export ORACLE_BASE=/u01/app/oracle
+export ORACLE_HOME=$ORACLE_BASE/product/19.3.0/dbhome_1
+export ORA_INVENTORY=/u01/app/oraInventory
+export ORACLE_SID=cdb1
+export PDB_NAME=pdb1
+export DATA_DIR=/u02/oradata
+
+export PATH=$ORACLE_HOME/bin:$PATH
+
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+export CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib
+</code></pre>
+<p>Execute <strong>.bash_profile</strong> to set environment for the current session.</p>
+<pre><code>[oracle@oracle-db-19c ~]$ source ~/.bash_profile
+</code></pre>
+<h3 id="install-oracle-database-19c-on-rocky-linux-8centos-8-in-silent-mode">Install Oracle Database 19c on Rocky Linux 8/CentOS 8 in Silent mode:</h3>
+<p>Download the ZIP file:</p>
+<p>URL: <a href="https://cloud.divineit.net/index.php/s/UVy9ztLxh28dswE">https://cloud.divineit.net/index.php/s/UVy9ztLxh28dswE</a></p>
+<p>Unzip the downloaded zip file to <strong>ORACLE_HOME</strong> directory.</p>
+<pre><code>[oracle@oracle-db-19c ~]$ unzip LINUX.X64_193000_db_home.zip -d $ORACLE_HOME
+</code></pre>
+<p><strong>Oracle Database 19c</strong> installer have problems detecting <strong>Rocky Linux-8 / CentOS 8</strong> operating system, however, we can workaround it, by setting an environment variable before starting installation.</p>
+<pre><code>[oracle@oracle-db-19c ~]$ export CV_ASSUME_DISTID=RHEL8.0
+</code></pre>
+<p>Go to <strong>ORACLE_HOME</strong> directory and start installation.</p>
+<pre><code>[oracle@oracle-db-19c ~]$ cd $ORACLE_HOME
+[oracle@oracle-db-19c dbhome_1]$ ./runInstaller -ignorePrereq -waitforcompletion -silent \
+&gt; oracle.install.option=INSTALL_DB_SWONLY \
+&gt; ORACLE_HOSTNAME=${ORACLE_HOSTNAME} \
+&gt; UNIX_GROUP_NAME=oinstall \
+&gt; INVENTORY_LOCATION=${ORA_INVENTORY} \
+&gt; ORACLE_HOME=${ORACLE_HOME} \
+&gt; ORACLE_BASE=${ORACLE_BASE} \
+&gt; oracle.install.db.InstallEdition=EE \
+&gt; oracle.install.db.OSDBA_GROUP=dba \
+&gt; oracle.install.db.OSBACKUPDBA_GROUP=backupdba \
+&gt; oracle.install.db.OSDGDBA_GROUP=dgdba \
+&gt; oracle.install.db.OSKMDBA_GROUP=kmdba \
+&gt; oracle.install.db.OSRACDBA_GROUP=racdba \
+&gt; SECURITY_UPDATES_VIA_MYORACLESUPPORT=false \
+&gt; DECLINE_SECURITY_UPDATES=true
+</code></pre>
+<p>Connect as <strong>root</strong> user and execute post-installation scripts.</p>
+<pre><code>su -
+
+
+[root@localhost ~]# /u01/app/oraInventory/orainstRoot.sh
+Changing permissions of /u01/app/oraInventory.
+Adding read,write permissions for group.
+Removing read,write,execute permissions for world.
+
+Changing groupname of /u01/app/oraInventory to oinstall.
+The execution of the script is complete.
+[root@localhost ~]# /u01/app/oracle/product/19.3.0/dbhome_1/root.sh
+Check /u01/app/oracle/product/19.3.0/dbhome_1/install/root_localhost.localdomain_2022-09-01_01-23-58-023232561.log for the output of root script
+[root@localhost ~]# 
+</code></pre>
+<h4 id="create-oracle-19c-multitenant-database-in-silent-mode">Create Oracle 19c Multitenant Database in Silent Mode:</h4>
+<p>Start <strong>Oracle Listener</strong> by using following command.</p>
+<pre><code>  [oracle@localhost dbhome_1]$ lsnrctl start
+
+LSNRCTL for Linux: Version 19.0.0.0.0 - Production on 01-SEP-2022 01:26:23
+
+Copyright (c) 1991, 2019, Oracle.  All rights reserved.
+
+Starting /u01/app/oracle/product/19.3.0/dbhome_1/bin/tnslsnr: please wait...
+
+TNSLSNR for Linux: Version 19.0.0.0.0 - Production
+Log messages written to /u01/app/oracle/diag/tnslsnr/localhost/listener/alert/log.xml
+Listening on: (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=localhost)(PORT=1521)))
+
+Connecting to (ADDRESS=(PROTOCOL=tcp)(HOST=)(PORT=1521))
+STATUS of the LISTENER
+------------------------
+Alias                     LISTENER
+Version                   TNSLSNR for Linux: Version 19.0.0.0.0 - Production
+Start Date                01-SEP-2022 01:26:23
+Uptime                    0 days 0 hr. 0 min. 0 sec
+Trace Level               off
+Security                  ON: Local OS Authentication
+SNMP                      OFF
+Listener Log File         /u01/app/oracle/diag/tnslsnr/localhost/listener/alert/log.xml
+Listening Endpoints Summary...
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=localhost)(PORT=1521)))
+The listener supports no services
+The command completed successfully
+[oracle@localhost dbhome_1]$ 
+</code></pre>
+<p>Create Oracle 19c Multitenant database by using the following command.</p>
+<pre><code>[oracle@localhost dbhome_1]$ dbca -silent -createDatabase \
+&gt; -templateName General_Purpose.dbc \
+&gt; -gdbname ${ORACLE_SID} -sid  ${ORACLE_SID} \
+&gt; -responseFile NO_VALUE \
+&gt; -characterSet AL32UTF8 \
+&gt; -sysPassword PrismERP@123 \
+&gt; -systemPassword PrismERP@123 \
+&gt; -createAsContainerDatabase true \
+&gt; -numberOfPDBs 1 \
+&gt; -pdbName ${PDB_NAME} \
+&gt; -pdbAdminPassword PrismERP@123 \
+&gt; -databaseType MULTIPURPOSE \
+&gt; -automaticMemoryManagement false \
+&gt; -totalMemory 800 \
+&gt; -storageType FS \
+&gt; -datafileDestination "${DATA_DIR}" \
+&gt; -redoLogFileSize 50 \
+&gt; -emConfiguration NONE \
+&gt; -ignorePreReqs
+</code></pre>
+<p>Connect as <strong>root</strong> user and execute following command to enable autostart of Oracle Databases.</p>
+<pre><code>[oracle@oracle-db-19c ~]$ su -
+[root@oracle-db-19c ~]# sed -i 's/:N$/:Y/g' /etc/oratab
+</code></pre>
+<p>Connect to SQL Shell by using <strong>sqlplus</strong> command.</p>
+<pre><code>[oracle@localhost dbhome_1]$ sqlplus / as sysdba
+
+SQL*Plus: Release 19.0.0.0.0 - Production on Thu Sep 1 02:05:57 2022
+Version 19.3.0.0.0
+
+Copyright (c) 1982, 2019, Oracle.  All rights reserved.
+
+
+Connected to:
+Oracle Database 19c Enterprise Edition Release 19.0.0.0.0 - Production
+Version 19.3.0.0.0
+</code></pre>
+<p>Enable <strong>Oracle Managed File (OMF)</strong> to simplify the creation of databases and database files.</p>
+<pre><code>SQL&gt; ALTER SYSTEM SET DB_CREATE_FILE_DEST='/u02/oradata' SCOPE=BOTH;
+</code></pre>
+<p>Enable autostart of Pluggable databases with startup of Container Database.</p>
+<pre><code>SQL&gt; ALTER PLUGGABLE DATABASE PDB1 SAVE STATE;
+</code></pre>
+<h4 id="create-systemd-service-for-oracle-database-19c-on-rocky-linux-8centos-8">Create SystemD Service for Oracle Database 19c on Rocky Linux 8/CentOS 8:</h4>
+<p>To configure autostart of Oracle Database 19c on CentOS 8, we have to write a <strong>SystemD</strong> service.</p>
+<p>[root@oracle-db-19c ~]# vi /usr/lib/systemd/system/dbora.service</p>
+<p>Add following lines of code in this file.</p>
+<pre><code>[Unit]
+Description=Oracle Database Service
+After=network.target
+ 
+[Service]
+Type=forking
+ExecStart=/u01/app/oracle/product/19.3.0/dbhome_1/bin/dbstart /u01/app/oracle/product/19.3.0/dbhome_1
+ExecStop=/u01/app/oracle/product/19.3.0/dbhome_1/bin/dbshut /u01/app/oracle/product/19.3.0/dbhome_1
+User=oracle
+TimeoutSec=300s
+ 
+[Install]
+WantedBy=multi-user.target
+</code></pre>
+<p>Execute following command to inform <strong>SystemD</strong> about changes in unit files.</p>
+<pre><code>[root@oracle-db-19c ~]# systemctl daemon-reload
+</code></pre>
+<p>Enable and start Oracle Database 19c service.</p>
+<pre><code>[root@oracle-db-19c ~]# systemctl enable --now dbora.service
+</code></pre>
+<p>Boom!! We have successfully installed Oracle Database 19c on CentOS 8 server and created a Multitenant Database in this server.</p>
+</div>
+</body>
+
+</html>
